@@ -320,6 +320,30 @@ static unsigned int next_power_of_two(unsigned int n)
 	return ++n;
 }
 
+static void move_forward(int row_sz)
+{
+    if (scroll_y + canvas_h >= page_tex.h) {
+        if (currentpage + 1 < fz_count_pages(ctx, doc)) {
+            scroll_y = 0;
+            currentpage += 1;
+        }
+    } else {
+        scroll_y += row_sz;
+    }
+}
+
+static void move_backward(int row_sz)
+{
+    if (scroll_y <= 0) {
+        if (currentpage > 0) {
+            scroll_y = page_tex.h;
+            currentpage -= 1;
+        }
+    } else {
+        scroll_y -= row_sz;
+    }
+}
+
 static void update_title(void)
 {
 	static char buf[256];
@@ -1056,7 +1080,7 @@ static void do_app(void)
 		case 'o': toggle_outline(); break;
 		case 'L': showlinks = !showlinks; break;
 		case 'i': showinfo = !showinfo; break;
-		case 'r': reload(); break;
+		case 'R': reload(); break;
 		case 'q': quit(); break;
 
 		case 'I': currentinvert = !currentinvert; break;
@@ -1066,17 +1090,20 @@ static void do_app(void)
 		case 'H': auto_zoom_h(); break;
 		case 'Z': auto_zoom(); break;
 		case 'z': currentzoom = number > 0 ? number : DEFRES; break;
-		case '+': currentzoom = zoom_in(currentzoom); break;
+		case '+': case '=': currentzoom = zoom_in(currentzoom); break;
 		case '-': currentzoom = zoom_out(currentzoom); break;
-		case '[': currentrotate += 90; break;
-		case ']': currentrotate -= 90; break;
-		case 'k': case KEY_UP: scroll_y -= 10; break;
-		case 'j': case KEY_DOWN: scroll_y += 10; break;
-		case 'h': case KEY_LEFT: scroll_x -= 10; break;
-		case 'l': case KEY_RIGHT: scroll_x += 10; break;
+		case '[': currentrotate += 0.1; break;
+		case ']': currentrotate -= 0.1; break;
+		case '{': currentrotate += 90; break;
+		case '}': currentrotate -= 90; break;
+        case '|': currentrotate = 0; break;
+		case 'k': case KEY_UP: move_backward(canvas_h / 7); break;
+		case 'j': case KEY_DOWN: move_forward(canvas_h / 7); break;
+ 		case 'h': case KEY_LEFT: scroll_x -= canvas_w / 10; break;
+		case 'l': case KEY_RIGHT: scroll_x += canvas_w / 10; break;
 
-		case 'b': number = fz_maxi(number, 1); while (number--) smart_move_backward(); break;
-		case ' ': number = fz_maxi(number, 1); while (number--) smart_move_forward(); break;
+		case 'b': case 'u': number = fz_maxi(number, 1); while (number--) smart_move_backward(); break;
+		case ' ': case 'd': number = fz_maxi(number, 1); while (number--) smart_move_forward(); break;
 		case ',': case KEY_PAGE_UP: currentpage -= fz_maxi(number, 1); break;
 		case '.': case KEY_PAGE_DOWN: currentpage += fz_maxi(number, 1); break;
 		case '<': currentpage -= 10 * fz_maxi(number, 1); break;
@@ -1090,6 +1117,14 @@ static void do_app(void)
         case 'Y': g_y_shrink = fz_maxi(0, (g_y_shrink - 5)); break;
 
         case 'c': g_backcolor = get_random_backcolor(); break;
+
+        case 'r':
+            g_x_shrink = g_y_shrink = 0;
+            g_backcolor = 0xFFFFFF;
+            currentrotate = 0;
+			auto_zoom();
+            break;
+
 		case 'm':
 			if (number == 0)
 				push_history();
@@ -1272,7 +1307,8 @@ static void do_help(void)
 	y = do_help_line(x, y, "i", "show document information");
 	y = do_help_line(x, y, "o", "show/hide outline");
 	y = do_help_line(x, y, "L", "show/hide links");
-	y = do_help_line(x, y, "r", "reload file");
+	y = do_help_line(x, y, "r", "reset page settings");
+	y = do_help_line(x, y, "R", "reload file");
 	y = do_help_line(x, y, "q", "quit");
 	y += ui.lineheight;
 	y = do_help_line(x, y, "c", "change background color");
@@ -1283,14 +1319,16 @@ static void do_help(void)
 	y = do_help_line(x, y, "Z", "fit to page");
 	y = do_help_line(x, y, "z", "reset zoom");
 	y = do_help_line(x, y, "N z", "set zoom to N");
-	y = do_help_line(x, y, "+ or -", "zoom in or out");
-	y = do_help_line(x, y, "[ or ]", "rotate left or right");
-	y = do_help_line(x, y, "arrow keys", "pan in small increments");
+	y = do_help_line(x, y, "+,= or -", "zoom in or out");
+	y = do_help_line(x, y, "[ or ]", "rotate left or right slightly");
+	y = do_help_line(x, y, "{ or }", "rotate left or right");
+	y = do_help_line(x, y, "|", "restore rotation");
+	y = do_help_line(x, y, "arrow keys or h,j,k,l", "pan in small increments");
 	y = do_help_line(x, y, "x or y", "cut margin horizontally or vertically");
 	y = do_help_line(x, y, "X or Y", "add margin horizontally or vertically");
 	y += ui.lineheight;
-	y = do_help_line(x, y, "b", "smart move backward");
-	y = do_help_line(x, y, "Space", "smart move forward");
+	y = do_help_line(x, y, "b or u or Shift+Space", "smart move backward");
+	y = do_help_line(x, y, "Space or d", "smart move forward");
 	y = do_help_line(x, y, ", or PgUp", "go backward");
 	y = do_help_line(x, y, ". or PgDn", "go forward");
 	y = do_help_line(x, y, "<", "go backward 10 pages");
@@ -1503,6 +1541,13 @@ static void on_char(GLFWwindow *window, unsigned int key, int mod)
 {
 	ui.key = key;
 	ui.mod = mod;
+
+    /* Let Shift + Space == PageUp */
+	if (GLFW_MOD_SHIFT == mod && ' ' == key)
+	{
+        ui.key = 'b';
+    }
+
 	run_main_loop();
 	ui.key = ui.mod = 0;
 }
