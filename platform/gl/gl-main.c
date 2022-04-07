@@ -279,6 +279,8 @@ static float oldzoom = DEFRES, currentzoom = DEFRES;
 static float oldrotate = 0, currentrotate = 0;
 static fz_matrix page_ctm, page_inv_ctm;
 
+static int g_old_x_shrink = 0, g_old_y_shrink = 0, g_x_shrink = 0, g_y_shrink = 0;
+
 static int isfullscreen = 0;
 static int showoutline = 0;
 static int showlinks = 0;
@@ -388,7 +390,24 @@ void render_page(void)
 		fz_invert_pixmap(ctx, pix);
 		fz_gamma_pixmap(ctx, pix, 1 / 1.4f);
 	}
+
+	if (g_x_shrink || g_y_shrink){
+        /* crop page white margin */
+        fz_irect nsize;
+        fz_pixmap_bbox_no_ctx(pix, &nsize);
+        nsize.x0 += g_x_shrink * currentzoom / 72;
+        nsize.y0 += g_y_shrink * currentzoom / 72;
+        nsize.x1 -= g_x_shrink * currentzoom / 72;
+        nsize.y1 -= g_y_shrink * currentzoom / 72;
+        fz_pixmap* shrink_pix = fz_new_pixmap_with_bbox(ctx, pix->colorspace, &nsize, NULL, 0);
+        fz_copy_pixmap_rect(ctx, shrink_pix, pix, &nsize,pix->colorspace);
+
+        texture_from_pixmap(&page_tex, shrink_pix);
+        fz_drop_pixmap(ctx, shrink_pix);
+    }
+    else {
         texture_from_pixmap(&page_tex, pix);
+    }
 	fz_drop_pixmap(ctx, pix);
 
 	annot_count = 0;
@@ -1065,6 +1084,11 @@ static void do_app(void)
 		case 'g': jump_to_page(number - 1); break;
 		case 'G': jump_to_page(fz_count_pages(ctx, doc) - 1); break;
 
+    	case 'x': g_x_shrink = fz_mini(page_tex.w / 2, g_x_shrink + 5); break;
+        case 'X': g_x_shrink = fz_maxi(0, (g_x_shrink - 5)); break;
+        case 'y': g_y_shrink = fz_mini(page_tex.h / 2, g_y_shrink + 5); break;
+        case 'Y': g_y_shrink = fz_maxi(0, (g_y_shrink - 5)); break;
+
         case 'c': g_backcolor = get_random_backcolor(); break;
 		case 'm':
 			if (number == 0)
@@ -1226,7 +1250,7 @@ static void do_help(void)
 	int x = canvas_x + 4 * ui.lineheight;
 	int y = canvas_y + 4 * ui.lineheight;
 	int w = canvas_w - 8 * ui.lineheight;
-	int h = 39 * ui.lineheight;
+	int h = 41 * ui.lineheight;
 
 	glBegin(GL_TRIANGLE_STRIP);
 	{
@@ -1262,6 +1286,8 @@ static void do_help(void)
 	y = do_help_line(x, y, "+ or -", "zoom in or out");
 	y = do_help_line(x, y, "[ or ]", "rotate left or right");
 	y = do_help_line(x, y, "arrow keys", "pan in small increments");
+	y = do_help_line(x, y, "x or y", "cut margin horizontally or vertically");
+	y = do_help_line(x, y, "X or Y", "add margin horizontally or vertically");
 	y += ui.lineheight;
 	y = do_help_line(x, y, "b", "smart move backward");
 	y = do_help_line(x, y, "Space", "smart move forward");
@@ -1290,7 +1316,8 @@ static void do_canvas(void)
 
 	float x, y;
 
-	if (oldpage != currentpage || oldzoom != currentzoom || oldrotate != currentrotate || oldinvert != currentinvert)
+	if (oldpage != currentpage || oldzoom != currentzoom || oldrotate != currentrotate || oldinvert != currentinvert
+		|| g_old_x_shrink != g_x_shrink || g_old_y_shrink != g_y_shrink)
 	{
 		render_page();
 		update_title();
@@ -1298,6 +1325,8 @@ static void do_canvas(void)
 		oldzoom = currentzoom;
 		oldrotate = currentrotate;
 		oldinvert = currentinvert;
+		g_old_x_shrink = g_x_shrink;
+        g_old_y_shrink = g_y_shrink;
 	}
 
 	if (ui.x >= canvas_x && ui.x < canvas_x + canvas_w && ui.y >= canvas_y && ui.y < canvas_y + canvas_h)
