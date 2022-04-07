@@ -1234,6 +1234,7 @@ static void do_info(void)
 	int y = canvas_y + 4 * ui.lineheight;
 	int w = canvas_w - 36 * ui.lineheight;
 	int h = 9 * ui.lineheight;
+	w=w<1000?1000:w;
 
 	glBegin(GL_TRIANGLE_STRIP);
 	{
@@ -1293,6 +1294,7 @@ static void do_help(void)
 	int y = canvas_y + 4 * ui.lineheight;
 	int w = canvas_w - 36* ui.lineheight;
 	int h = 44 * ui.lineheight;
+	w=w<1000?1000:w;
 
 	glBegin(GL_TRIANGLE_STRIP);
 	{
