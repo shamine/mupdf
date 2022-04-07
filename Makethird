@@ -20,6 +20,8 @@ ZLIB_DIR := thirdparty/zlib
 CURL_DIR := thirdparty/curl
 GLFW_DIR := thirdparty/glfw
 
+TINYFILEDLG_DIR := thirdparty/tinyfiledialogs
+
 # --- MuJS ---
 
 ifneq "$(wildcard $(MUJS_DIR)/README)" ""
@@ -768,4 +770,25 @@ ifeq "$(HAVE_PTHREAD)" "yes"
 THREADING_CFLAGS := $(SYS_PTHREAD_CFLAGS) -DHAVE_PTHREAD
 THREADING_LIBS := $(SYS_PTHREAD_LIBS)
 endif
+endif
+
+# --- Tiny file dialog ---
+
+ifneq "$(wildcard $(TINYFILEDLG_DIR)/hello.c)" ""
+
+TINYFILEDLG_OUT := $(OUT)/tinyfiledialogs
+TINYFILEDLG_SRC := \
+	tinyfiledialogs.c
+
+TINYFILEDLG_OBJ := $(addprefix $(TINYFILEDLG_OUT)/, $(TINYFILEDLG_SRC:%.c=%.o))
+
+$(TINYFILEDLG_OUT):
+	$(MKDIR_CMD)
+
+$(TINYFILEDLG_OUT)/%.o: $(TINYFILEDLG_DIR)/%.c | $(TINYFILEDLG_OUT)
+	$(CC_CMD) $(TINYFILEDLG_CFLAGS)
+
+TINYFILEDLG_CFLAGS := \
+	-I$(TINYFILEDLG_DIR)
+
 endif

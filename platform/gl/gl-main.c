@@ -1,6 +1,7 @@
 #include "gl-app.h"
 
 #include "mupdf/pdf.h" /* for pdf specifics and forms */
+#include "tinyfiledialogs.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -1535,7 +1536,22 @@ int main(int argc, char **argv)
 		if (!win_open_file(filename, sizeof filename))
 			exit(0);
 #else
+        char const * lTheOpenFileName;
+        char const * lFilterPatterns[] = {"*.pdf","*.epub"};
+
+        lTheOpenFileName = tinyfd_openFileDialog(
+                "Please choose a pdf or a epub file",
+                "",
+                nelem(lFilterPatterns),
+                lFilterPatterns,
+                NULL,
+                0);
+        if (lTheOpenFileName){
+            fz_strlcpy(filename, lTheOpenFileName, sizeof(filename));
+        } else {
 		usage(argv[0]);
+        }
+
 #endif
 	}
 
