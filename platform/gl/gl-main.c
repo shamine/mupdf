@@ -1223,9 +1223,9 @@ static void do_info(void)
 {
 	char buf[256];
 
-	int x = canvas_x + 4 * ui.lineheight;
+	int x = canvas_x + 18 * ui.lineheight;
 	int y = canvas_y + 4 * ui.lineheight;
-	int w = canvas_w - 8 * ui.lineheight;
+	int w = canvas_w - 36 * ui.lineheight;
 	int h = 9 * ui.lineheight;
 
 	glBegin(GL_TRIANGLE_STRIP);
