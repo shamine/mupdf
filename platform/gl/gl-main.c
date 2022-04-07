@@ -24,9 +24,9 @@ enum
 	DEFAULT_LAYOUT_EM = 12,
 
 	/* Default UI sizes */
-	DEFAULT_UI_FONTSIZE = 15,
-	DEFAULT_UI_BASELINE = 14,
-	DEFAULT_UI_LINEHEIGHT = 18,
+	DEFAULT_UI_FONTSIZE = 28,
+	DEFAULT_UI_BASELINE = 26,
+	DEFAULT_UI_LINEHEIGHT = 32,
 };
 
 #define DEFAULT_WINDOW_W (612 * currentzoom / 72)
@@ -244,7 +244,7 @@ static int zoom_out(int oldres)
 
 #define MINRES (zoom_list[0])
 #define MAXRES (zoom_list[nelem(zoom_list)-1])
-#define DEFRES 96
+#define DEFRES 180
 
 static char filename[2048];
 static char *password = "";
