@@ -41,6 +41,8 @@ static GLint max_texture_size = 8192;
 
 /* backgroud color */
 static GLuint g_backcolor = 0xffffff;
+static const int MAX_RECENT_FILES = 50;
+
 static int ui_needs_update = 0;
 
 static GLuint get_random_backcolor(void)
@@ -62,6 +64,70 @@ static GLuint get_random_backcolor(void)
 
     return sa_bkcolor_list[random_variable];
 }
+
+static int load_reading_progress(const char* filename)
+{
+    int pages = 1;
+    char line[1024];
+    char buf[512];
+
+    const char* home = getenv("HOME");
+    if (!home)
+        return 1;
+
+    sprintf(buf, "%s/.mupdf.history", home);
+    FILE* fp = fopen(buf, "r");
+    if (fp != NULL) {
+        const int len = strlen(filename);
+
+        while (fgets(line, sizeof(line), fp)) {
+            if (strncmp(line, filename, len) == 0) {
+                const char* pos = line + len + 1;
+                pages = fz_atoi(pos);
+                break;
+            }
+        }
+        fclose(fp);
+    }
+
+    return pages;
+}
+
+static void save_reading_progress(const char* filename, int pages)
+{
+    char line[1024];
+    char temp_file[512];
+    char original_file[512];
+
+    const char* home = getenv("HOME");
+    if (!home)
+        return;
+
+    sprintf(temp_file, "%s/.mupdf.history.tmp", home);
+    FILE* tmpfp = fopen(temp_file, "w");
+    if (!tmpfp)
+        return;
+    fprintf(tmpfp, "%s:%d\n", filename, pages + 1); /* save current file record */
+
+    sprintf(original_file, "%s/.mupdf.history", home);
+    FILE* fp = fopen(original_file, "r");
+    if (fp != NULL) {
+        const int len = strlen(filename);
+        int record = MAX_RECENT_FILES;
+
+        while (--record > 0 && fgets(line, sizeof(line), fp)) {
+            if (strncmp(line, filename, len) != 0) {
+                fprintf(tmpfp, "%s", line);
+            }
+        }
+        fclose(fp);
+        remove(original_file);
+    }
+
+    fclose(tmpfp);
+    rename(temp_file, original_file);
+}
+
 static void ui_begin(void)
 {
 	ui_needs_update = 0;
@@ -322,7 +388,7 @@ void render_page(void)
 		fz_invert_pixmap(ctx, pix);
 		fz_gamma_pixmap(ctx, pix, 1 / 1.4f);
 	}
-	texture_from_pixmap(&page_tex, pix);
+        texture_from_pixmap(&page_tex, pix);
 	fz_drop_pixmap(ctx, pix);
 
 	annot_count = 0;
@@ -1579,7 +1645,7 @@ int main(int argc, char **argv)
         if (lTheOpenFileName){
             fz_strlcpy(filename, lTheOpenFileName, sizeof(filename));
         } else {
-		usage(argv[0]);
+            usage(argv[0]);
         }
 
 #endif
@@ -1587,7 +1653,12 @@ int main(int argc, char **argv)
 
 	if (fz_optind < argc)
 		anchor = argv[fz_optind++];
-
+	else{
+		static char page_no[10];
+		sprintf(page_no,"%d",load_reading_progress(filename));
+		anchor=page_no;
+	}
+		
 	title = strrchr(filename, '/');
 	if (!title)
 		title = strrchr(filename, '\\');
@@ -1682,6 +1753,8 @@ int main(int argc, char **argv)
 	fz_drop_context(ctx);
 
 	glfwTerminate();
+
+	save_reading_progress(filename, currentpage);
 
 	return 0;
 }
