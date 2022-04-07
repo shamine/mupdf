@@ -39,8 +39,29 @@ GLFWwindow *window = NULL;
 static int has_ARB_texture_non_power_of_two = 1;
 static GLint max_texture_size = 8192;
 
+/* backgroud color */
+static GLuint g_backcolor = 0xffffff;
 static int ui_needs_update = 0;
 
+static GLuint get_random_backcolor(void)
+{
+    static const GLuint sa_bkcolor_list[] = {
+        0xFFFFFF,  //white
+        0xEEE8D5,  //base2
+        0xFDF6E3,  //base3
+        0xE5DED6,  //newsprint
+        0xEFEFEF,  //palegray
+        0xe6ebee,  //elegant
+        0xf3f6f4,  //delight
+        0xfff6da,  //sandbox
+        0xe6e6e6,  //greyscale
+        0xf1feee,  //sprout
+    };
+    srand(time(0)); //use current time as seed for random generator
+    int random_variable = rand() % nelem(sa_bkcolor_list);
+
+    return sa_bkcolor_list[random_variable];
+}
 static void ui_begin(void)
 {
 	ui_needs_update = 0;
@@ -112,7 +133,12 @@ void ui_draw_image(struct texture *tex, float x, float y)
 	glEnable(GL_TEXTURE_2D);
 	glBegin(GL_TRIANGLE_STRIP);
 	{
-		glColor4f(1, 1, 1, 1);
+		glColor4ub(
+            (g_backcolor >> 16) & 0xFF, 
+            (g_backcolor >> 8) & 0xFF,
+            g_backcolor & 0xFF,
+            255);
+
 		glTexCoord2f(0, tex->t);
 		glVertex2f(x + tex->x, y + tex->y + tex->h);
 		glTexCoord2f(0, 0);
@@ -973,6 +999,7 @@ static void do_app(void)
 		case 'g': jump_to_page(number - 1); break;
 		case 'G': jump_to_page(fz_count_pages(ctx, doc) - 1); break;
 
+        case 'c': g_backcolor = get_random_backcolor(); break;
 		case 'm':
 			if (number == 0)
 				push_history();
@@ -1133,7 +1160,7 @@ static void do_help(void)
 	int x = canvas_x + 4 * ui.lineheight;
 	int y = canvas_y + 4 * ui.lineheight;
 	int w = canvas_w - 8 * ui.lineheight;
-	int h = 38 * ui.lineheight;
+	int h = 39 * ui.lineheight;
 
 	glBegin(GL_TRIANGLE_STRIP);
 	{
@@ -1158,6 +1185,7 @@ static void do_help(void)
 	y = do_help_line(x, y, "r", "reload file");
 	y = do_help_line(x, y, "q", "quit");
 	y += ui.lineheight;
+	y = do_help_line(x, y, "c", "change background color");
 	y = do_help_line(x, y, "I", "toggle inverted color mode");
 	y = do_help_line(x, y, "f", "fullscreen window");
 	y = do_help_line(x, y, "w", "shrink wrap window");
@@ -1497,6 +1525,7 @@ static void usage(const char *argv0)
 	fprintf(stderr, "\t-S -\tfont size for EPUB layout\n");
 	fprintf(stderr, "\t-U -\tuser style sheet for EPUB layout\n");
 	fprintf(stderr, "\t-X\tdisable document styles for EPUB layout\n");
+    fprintf(stderr, "\t-c -\tset backgroud color, E.g 0xfdf6e3\n");
 	exit(1);
 }
 
@@ -1509,7 +1538,7 @@ int main(int argc, char **argv)
 	const GLFWvidmode *video_mode;
 	int c;
 
-	while ((c = fz_getopt(argc, argv, "p:r:IW:H:S:U:X")) != -1)
+	while ((c = fz_getopt(argc, argv, "p:r:IW:H:S:U:X:c")) != -1)
 	{
 		switch (c)
 		{
@@ -1522,6 +1551,7 @@ int main(int argc, char **argv)
 		case 'S': layout_em = fz_atof(fz_optarg); break;
 		case 'U': layout_css = fz_optarg; break;
 		case 'X': layout_use_doc_css = 0; break;
+		case 'c': g_backcolor = strtol(fz_optarg, NULL, 16); break;
 		}
 	}
 
