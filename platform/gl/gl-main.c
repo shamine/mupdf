@@ -220,7 +220,9 @@ void ui_draw_image(struct texture *tex, float x, float y)
 	glDisable(GL_BLEND);
 }
 
-static const int zoom_list[] = { 18, 24, 36, 54, 72, 96, 120, 144, 180, 216, 288 };
+static const int zoom_list[] = { 18, 24, 36, 48, 54, 64, 72, 84, 96, 108, 120, 132, 144, 156, 168, 180,
+								 192, 204, 216, 228, 240, 252, 264, 276, 288, 300, 312, 324, 336, 348, 360, 
+								 372, 384, 396, 408, 420, 432, 446, 464, 512 };
 
 static int zoom_in(int oldres)
 {
