@@ -1,6 +1,7 @@
 #include "gl-app.h"
 
 #include "mupdf/pdf.h" /* for pdf specifics and forms */
+#include "utils/utf8.h"
 #include "tinyfiledialogs.h"
 
 #include <string.h>
@@ -346,10 +347,14 @@ static void move_backward(int row_sz)
 
 static void update_title(void)
 {
-	static char buf[256];
+	static char buf[1024];
 	size_t n = strlen(title);
-	if (n > 50)
-		sprintf(buf, "...%s - %d / %d", title + n - 50, currentpage + 1, fz_count_pages(ctx, doc));
+	if (n > 150)
+	{
+		char title_str[150];
+		utf8ncpy(title_str,title,150);
+		sprintf(buf, "%s... - %d / %d", title_str, currentpage + 1, fz_count_pages(ctx, doc));
+	}
 	else
 		sprintf(buf, "%s - %d / %d", title, currentpage + 1, fz_count_pages(ctx, doc));
 	glfwSetWindowTitle(window, buf);
